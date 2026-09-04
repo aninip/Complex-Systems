@@ -2,6 +2,6 @@
   <Folder Name="/Элементы решения/">
     <File Path="../../../Downloads/Разработчик C# - Тестовое/Разработчик C# - Тестовое/Задание.txt" />
   </Folder>
-  <Project Path="../ScheduleParserTests.cs/Schedule.Tests.cs.csproj" />
   <Project Path="Complex Systems.csproj" />
+  <Project Path="Schedule.Tests/Schedule.Tests.cs.csproj" />
 </Solution>
