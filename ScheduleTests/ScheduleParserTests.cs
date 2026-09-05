@@ -1,4 +1,4 @@
-﻿namespace ScheduleParserTests.cs
+﻿namespace Complex_Systems.ScheduleTests
 {
     public class ScheduleParserTests
     {

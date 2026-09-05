@@ -3,5 +3,4 @@
     <File Path="../../../Downloads/Разработчик C# - Тестовое/Разработчик C# - Тестовое/Задание.txt" />
   </Folder>
   <Project Path="Complex Systems.csproj" />
-  <Project Path="Schedule.Tests/Schedule.Tests.cs.csproj" />
 </Solution>

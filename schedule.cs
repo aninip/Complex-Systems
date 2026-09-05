@@ -1,23 +1,22 @@
-using System;
+using Complex_Systems.Model;
+using Complex_Systems.Parsing;
 
-namespace Test
+namespace Complex_Systems
 {
-    // класс должен быть эффективным и не использовать много памяти и ресурсов даже тогда, когда в расписании задано много значений. 
-    // Например очень много значений с шагом в 1 мс.
-
     /// <summary>
     /// Класс для задания и расчета времени по расписанию.
     /// </summary>
     public class Schedule
-	{
-		/// <summary>
-		/// Создает пустой экземпляр, который будет соответствовать
-		/// расписанию типа "*.*.* * *:*:*.*" (раз в 1 мс).
-		/// </summary>
-		public Schedule()
-		{
-		}
-        ///TODO: не храним события. Храним только описание ограничений
+    {
+        private readonly ScheduleDefinition _definition;
+
+        /// <summary>
+        /// Создает пустой экземпляр, который будет соответствовать
+        /// расписанию типа "*.*.* * *:*:*.*" (раз в 1 мс).
+        /// </summary>
+        public Schedule() : this("*.*.* * *:*:*.*")
+        {
+        }
 
         /// <summary>
         /// Создает экземпляр из строки с представлением расписания.
@@ -58,47 +57,56 @@ namespace Test
         ///     означает 01:30 по первым числам каждого месяца
         /// </param>
         public Schedule(string scheduleString)
-		{
-		}
+        {
+            var scheduleParser = new ScheduleParser();
+            _definition = scheduleParser.Parse(scheduleString);
+        }
 
-		/// <summary>
-		/// Возвращает следующий ближайший к заданному времени момент в расписании или
-		/// само заданное время, если оно есть в расписании.
-		/// </summary>
-		/// <param name="t1">Заданное время</param>
-		/// <returns>Ближайший момент времени в расписании</returns>
-		public DateTime NearestEvent(DateTime t1)
-		{
-		}
+        /// <summary>
+        /// Возвращает следующий ближайший к заданному времени момент в расписании или
+        /// само заданное время, если оно есть в расписании.
+        /// </summary>
+        /// <param name="t1">Заданное время</param>
+        /// <returns>Ближайший момент времени в расписании</returns>
+        public DateTime NearestEvent(DateTime t1)
+        {
+            return t1;
 
-		/// <summary>
-		/// Возвращает предыдущий ближайший к заданному времени момент в расписании или
-		/// само заданное время, если оно есть в расписании.
-		/// </summary>
-		/// <param name="t1">Заданное время</param>
-		/// <returns>Ближайший момент времени в расписании</returns>
-		public DateTime NearestPrevEvent(DateTime t1)
-		{
-		}
+        }
 
-		/// <summary>
-		/// Возвращает следующий момент времени в расписании.
-		/// </summary>
-		/// <param name="t1">Время, от которого нужно отступить</param>
-		/// <returns>Следующий момент времени в расписании</returns>
-		public DateTime NextEvent(DateTime t1)
-		{
-		}
+        /// <summary>
+        /// Возвращает предыдущий ближайший к заданному времени момент в расписании или
+        /// само заданное время, если оно есть в расписании.
+        /// </summary>
+        /// <param name="t1">Заданное время</param>
+        /// <returns>Ближайший момент времени в расписании</returns>
+        public DateTime NearestPrevEvent(DateTime t1)
+        {
+            return t1;
 
-		/// <summary>
-		/// Возвращает предыдущий момент времени в расписании.
-		/// </summary>
-		/// <param name="t1">Время, от которого нужно отступить</param>
-		/// <returns>Предыдущий момент времени в расписании</returns>
-		public DateTime PrevEvent(DateTime t1)
-		{
-		}
+        }
 
-	}
-	
+        /// <summary>
+        /// Возвращает следующий момент времени в расписании.
+        /// </summary>
+        /// <param name="t1">Время, от которого нужно отступить</param>
+        /// <returns>Следующий момент времени в расписании</returns>
+        public DateTime NextEvent(DateTime t1)
+        {
+            return t1;
+
+        }
+
+        /// <summary>
+        /// Возвращает предыдущий момент времени в расписании.
+        /// </summary>
+        /// <param name="t1">Время, от которого нужно отступить</param>
+        /// <returns>Предыдущий момент времени в расписании</returns>
+        public DateTime PrevEvent(DateTime t1)
+        {
+            return t1;
+        }
+
+    }
+
 }

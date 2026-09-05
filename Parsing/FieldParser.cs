@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using Complex_Systems.Model;
+using System.Globalization;
 
 namespace Complex_Systems.Parsing
 {

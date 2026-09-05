@@ -1,8 +1,7 @@
 ﻿using Complex_Systems.Model;
 using Complex_Systems.Parsing;
 
-namespace Schedule.Tests.cs
-
+namespace Complex_Systems.ScheduleTests
 {
     public class FieldParserTests
     {
