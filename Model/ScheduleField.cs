@@ -2,7 +2,7 @@
 
 namespace Complex_Systems.Model;
 
-public readonly struct ScheduleField
+public sealed class ScheduleField
 {
     private readonly ulong[] _words;
 
