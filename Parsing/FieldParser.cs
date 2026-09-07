@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace Complex_Systems.Parsing
 {
-    public static class FieldParser
+    internal static class FieldParser
     {
         /// <summary>
         /// Разбирает выражение одного поля расписания.
@@ -17,10 +17,7 @@ namespace Complex_Systems.Parsing
         /// <exception cref="ArgumentException">
         /// Если выражение имеет неправильный формат или содержит недопустимые значения.
         /// </exception>
-        public static ScheduleField Parse(
-            string expression,
-            int minValue,
-            int maxValue)
+        public static ScheduleField Parse(string expression, int minValue, int maxValue)
         {
             if (string.IsNullOrWhiteSpace(expression))
             {
