@@ -2,14 +2,42 @@
 
 namespace Complex_Systems.Model;
 
-public sealed class ScheduleField
+/// <summary>
+/// Неизменяемое битовое представление разрешённых значений диапазона
+/// </summary>
+internal sealed class ScheduleField
 {
+    /// <summary>
+    /// Битовое представление разрешённых значений
+    /// </summary>
     private readonly ulong[] _words;
 
+    /// <summary>
+    /// Количество значений в диапазоне от Min до Max включительно
+    /// </summary>
+    private readonly int _valueCount;
+
+    /// <summary>
+    /// Минимальное значение диапазона
+    /// </summary>
     public int Min { get; }
+
+    /// <summary>
+    /// Максимальное значение диапазона
+    /// </summary>
     public int Max { get; }
 
-    public ScheduleField(int min, int max)
+    /// <summary>
+    /// Создаёт поле с указанными границами допустимого диапазона и отмечает переданные значения как разрешённые
+    /// <para>
+    /// Например, для задания разрешённых часов 0, 4, 8, 12, 16 и 20:
+    /// <c> new ScheduleField(0, 23, [0, 4, 8, 12, 16, 20])</c>
+    /// </para>
+    /// </summary>
+    /// <param name="min">Минимально возможное значение поля</param>
+    /// <param name="max">Максимально возможное значение поля</param>
+    /// <param name="allowedValues">Значения, разрешённые в расписании</param>
+    public ScheduleField(int min, int max, ReadOnlySpan<int> allowedValues)
     {
         if (min < 0)
             throw new ArgumentOutOfRangeException(nameof(min));
@@ -20,40 +48,40 @@ public sealed class ScheduleField
         Min = min;
         Max = max;
 
-        int wordCount = (max + 64) / 64;
+        _valueCount = checked(max - min + 1);
+        int wordCount = (_valueCount + 63) / 64;
+
         _words = new ulong[wordCount];
+
+        foreach (int value in allowedValues)
+        {
+            ValidateValue(value);
+
+            int offset = value - Min;
+            int wordIndex = offset / 64;
+            int bitIndex = offset % 64;
+
+            _words[wordIndex] |= 1UL << bitIndex;
+        }
     }
 
     /// <summary>
-    /// Устанавливает указанное значение как разрешённое.
-    /// </summary>
-    public void Add(int value)
-    {
-        ValidateValue(value);
-
-        int wordIndex = value / 64;
-        int bitIndex = value % 64;
-
-        _words[wordIndex] |= 1UL << bitIndex;
-    }
-
-    /// <summary>
-    /// Проверяет, разрешено ли указанное значение.
+    /// Проверяет, разрешено ли указанное значение
     /// </summary>
     public bool Contains(int value)
     {
         if (value < Min || value > Max)
             return false;
 
-        int wordIndex = value / 64;
-        int bitIndex = value % 64;
+        int offset = value - Min;
+        int wordIndex = offset / 64;
+        int bitIndex = offset % 64;
 
         return (_words[wordIndex] & (1UL << bitIndex)) != 0;
     }
 
     /// <summary>
-    /// Возвращает ближайшее разрешённое значение,
-    /// которое больше или равно указанному.
+    /// Возвращает ближайшее разрешённое значение, которое больше или равно указанному
     /// </summary>
     public int? GetNextOrSame(int value)
     {
@@ -63,52 +91,47 @@ public sealed class ScheduleField
         if (value > Max)
             return null;
 
-        int wordIndex = value / 64;
-        int bitIndex = value % 64;
+        int offset = value - Min;
 
-        // Убираем все биты левее value.
+        int wordIndex = offset / 64;
+        int bitIndex = offset % 64;
+
+        // Оставляем текущий бит и все биты правее него
         ulong word = _words[wordIndex] & (~0UL << bitIndex);
 
         if (word != 0)
-        {
-            int offset = BitOperations.TrailingZeroCount(word);
-            int result = wordIndex * 64 + offset;
+            return Min + GetLowestValueOffset(wordIndex, word);
 
-            return result <= Max ? result : null;
-        }
-
-        // Ищем в следующих словах.
-        for (wordIndex++; wordIndex < _words.Length; wordIndex++)
+        // Ищем следующее непустое слово
+        for (int index = wordIndex + 1; index < _words.Length; index++)
         {
-            word = _words[wordIndex];
+            word = _words[index];
 
             if (word == 0)
                 continue;
 
-            int offset = BitOperations.TrailingZeroCount(word);
-            int result = wordIndex * 64 + offset;
-
-            return result <= Max ? result : null;
+            return Min + GetLowestValueOffset(index, word);
         }
 
         return null;
     }
 
     /// <summary>
-    /// Возвращает ближайшее разрешённое значение,
-    /// которое строго больше указанного.
+    /// Возвращает ближайшее разрешённое значение, которое строго больше указанного
     /// </summary>
     public int? GetNext(int value)
     {
-        if (value < Min - 1)
-            value = Min - 1;
+        if (value >= Max)
+            return null;
+
+        if (value < Min)
+            return GetNextOrSame(Min);
 
         return GetNextOrSame(value + 1);
     }
 
     /// <summary>
-    /// Возвращает ближайшее разрешённое значение,
-    /// которое меньше или равно указанному.
+    /// Возвращает ближайшее разрешённое значение, которое меньше или равно указанному
     /// </summary>
     public int? GetPreviousOrSame(int value)
     {
@@ -118,10 +141,12 @@ public sealed class ScheduleField
         if (value < Min)
             return null;
 
-        int wordIndex = value / 64;
-        int bitIndex = value % 64;
+        int offset = value - Min;
 
-        // Оставляем только биты от начала слова до value включительно.
+        int wordIndex = offset / 64;
+        int bitIndex = offset % 64;
+
+        // Оставляем все биты от начала слова до текущего включительно
         ulong mask = bitIndex == 63
             ? ulong.MaxValue
             : (1UL << (bitIndex + 1)) - 1;
@@ -129,40 +154,46 @@ public sealed class ScheduleField
         ulong word = _words[wordIndex] & mask;
 
         if (word != 0)
-        {
-            int offset = 63 - BitOperations.LeadingZeroCount(word);
-            int result = wordIndex * 64 + offset;
+            return Min + GetHighestValueOffset(wordIndex, word);
 
-            return result >= Min ? result : null;
-        }
-
-        // Ищем в предыдущих словах.
-        for (wordIndex--; wordIndex >= 0; wordIndex--)
+        // Ищем предыдущее непустое слово
+        for (int index = wordIndex - 1; index >= 0; index--)
         {
-            word = _words[wordIndex];
+            word = _words[index];
 
             if (word == 0)
                 continue;
 
-            int offset = 63 - BitOperations.LeadingZeroCount(word);
-            int result = wordIndex * 64 + offset;
-
-            return result >= Min ? result : null;
+            return Min + GetHighestValueOffset(index, word);
         }
 
         return null;
     }
 
     /// <summary>
-    /// Возвращает ближайшее разрешённое значение,
-    /// которое строго меньше указанного.
+    /// Возвращает ближайшее разрешённое значение, которое строго меньше указанного
     /// </summary>
     public int? GetPrevious(int value)
     {
-        if (value > Max + 1)
-            value = Max + 1;
+        if (value <= Min)
+            return null;
+
+        if (value > Max)
+            return GetPreviousOrSame(Max);
 
         return GetPreviousOrSame(value - 1);
+    }
+
+    private int GetLowestValueOffset(int wordIndex, ulong word)
+    {
+        int bitIndex = BitOperations.TrailingZeroCount(word);
+        return wordIndex * 64 + bitIndex;
+    }
+
+    private int GetHighestValueOffset(int wordIndex, ulong word)
+    {
+        int bitIndex = 63 - BitOperations.LeadingZeroCount(word);
+        return wordIndex * 64 + bitIndex;
     }
 
     private void ValidateValue(int value)
@@ -175,4 +206,5 @@ public sealed class ScheduleField
                 $"Value must be between {Min} and {Max}.");
         }
     }
+
 }
