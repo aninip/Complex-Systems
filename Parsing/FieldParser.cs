@@ -1,57 +1,41 @@
 ﻿using Complex_Systems.Model;
 using System.Globalization;
+using System.Runtime.InteropServices;
 
-namespace Complex_Systems.Parsing
+namespace Complex_Systems.Parsing;
+
+/// <summary>
+/// Разбирает отдельное поле расписания
+/// </summary>
+internal static class FieldParser
 {
-    internal static class FieldParser
+    /// <summary>
+    /// Разбирает выражение одного поля расписания и создаёт
+    /// неизменяемое поле с разрешёнными значениями.
+    /// </summary>
+    /// <param name="expression">
+    /// Например: "*", "*/4", "1-5", "1,2,3-10/2".
+    /// </param>
+    /// <param name="minValue">Минимально возможное значение поля.</param>
+    /// <param name="maxValue">Максимально возможное значение поля.</param>
+    /// <returns>Неизменяемое поле с разрешёнными значениями.</returns>
+    /// <exception cref="ArgumentException">
+    /// Если выражение имеет неправильный формат или содержит значение вне допустимого диапазона.
+    /// </exception>
+    public static ScheduleField Parse(string expression, int minValue, int maxValue)
     {
-        /// <summary>
-        /// Разбирает выражение одного поля расписания.
-        /// </summary>
-        /// <param name="expression">
-        /// Например: "*", "*/4", "1-5", "1,2,3-10/2".
-        /// </param>
-        /// <param name="minValue">Минимальное допустимое значение поля.</param>
-        /// <param name="maxValue">Максимальное допустимое значение поля.</param>
-        /// <returns>Заполненное поле расписания.</returns>
-        /// <exception cref="ArgumentException">
-        /// Если выражение имеет неправильный формат или содержит недопустимые значения.
-        /// </exception>
-        public static ScheduleField Parse(string expression, int minValue, int maxValue)
+        if (string.IsNullOrWhiteSpace(expression))
         {
-            if (string.IsNullOrWhiteSpace(expression))
-            {
-                throw new ArgumentException(
-                    "Schedule field cannot be empty.",
-                    nameof(expression));
-            }
-
-            var field = new ScheduleField(minValue, maxValue);
-
-            string[] parts = expression.Split(
-                ',',
-                StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length == 0)
-            {
-                throw new ArgumentException(
-                    $"Invalid schedule field: '{expression}'.",
-                    nameof(expression));
-            }
-
-            foreach (string part in parts)
-            {
-                ParsePart(part.Trim(), field, minValue, maxValue);
-            }
-
-            return field;
+            throw new ArgumentException(
+                "Schedule field cannot be empty.",
+                nameof(expression));
         }
 
-        private static void ParsePart(
-            string part,
-            ScheduleField field,
-            int minValue,
-            int maxValue)
+        var allowedValues = new List<int>();
+
+        string[] parts = expression.Split(',');
+
+        foreach (string part in parts)
         {
             if (string.IsNullOrWhiteSpace(part))
             {
@@ -59,153 +43,178 @@ namespace Complex_Systems.Parsing
                     "Schedule field contains an empty part.");
             }
 
-            string[] stepParts = part.Split('/');
+            ParsePart(part.Trim(), minValue, maxValue, allowedValues);
+        }
 
-            if (stepParts.Length > 2)
+        return new ScheduleField(minValue, maxValue, CollectionsMarshal.AsSpan(allowedValues));
+    }
+
+    /// <summary> 
+    /// Разбирает один элемент списка и добавляет полученные 
+    /// разрешённые значения в указанный список.
+    /// </summary> 
+    /// <param name="part">Отдельный элемент выражения</param>
+    /// <param name="allowedValues">Список, в который добавляются разрешённые значения.</param>
+    private static void ParsePart(string part, int minValue, int maxValue, List<int> allowedValues)
+    {
+        // Отделяем шаг от основной части выражения
+        string[] stepParts = part.Split('/');
+
+        if (stepParts.Length > 2)
+        {
+            throw new ArgumentException(
+                $"Invalid step expression: '{part}'.");
+        }
+
+        int step = 1;
+
+        if (stepParts.Length == 2)
+        {
+            if (string.IsNullOrWhiteSpace(stepParts[1]))
             {
                 throw new ArgumentException(
-                    $"Invalid step expression: '{part}'.");
+                    $"Step is missing in expression: '{part}'.");
             }
 
-            int step = 1;
+            step = ParsePositiveInteger(stepParts[1], part);
+        }
 
-            if (stepParts.Length == 2)
-            {
-                if (string.IsNullOrWhiteSpace(stepParts[1]))
-                {
-                    throw new ArgumentException(
-                        $"Step is missing in expression: '{part}'.");
-                }
+        string rangeExpression = stepParts[0].Trim();
 
-                step = ParsePositiveInteger(stepParts[1], part);
-
-                if (step <= 0)
-                {
-                    throw new ArgumentException(
-                        $"Step must be greater than zero: '{part}'.");
-                }
-            }
-
-            string rangeExpression = stepParts[0].Trim();
-
-            if (rangeExpression == "*")
-            {
-                AddRange(
-                    field,
-                    minValue,
-                    maxValue,
-                    step);
-
-                return;
-            }
-
-            string[] rangeParts = rangeExpression.Split('-');
-
-            if (rangeParts.Length > 2)
-            {
-                throw new ArgumentException(
-                    $"Invalid range expression: '{part}'.");
-            }
-
-            int start = ParseValue(rangeParts[0], part);
-            int end = start;
-
-            if (rangeParts.Length == 2)
-            {
-                if (string.IsNullOrWhiteSpace(rangeParts[1]))
-                {
-                    throw new ArgumentException(
-                        $"Range end is missing: '{part}'.");
-                }
-
-                end = ParseValue(rangeParts[1], part);
-            }
-
-            ValidateRange(start, end, minValue, maxValue, part);
-
+        // Звёздочка означает весь допустимый диапазон поля.
+        if (rangeExpression == "*")
+        {
             AddRange(
-                field,
-                start,
-                end,
+                allowedValues,
+                minValue,
+                maxValue,
                 step);
+
+            return;
         }
 
-        private static void AddRange(
-            ScheduleField field,
-            int start,
-            int end,
-            int step)
+        // Если это не "*", проверяем наличие диапазона.
+        string[] rangeParts = rangeExpression.Split('-');
+
+        if (rangeParts.Length > 2)
         {
-            for (int value = start; value <= end; value += step)
-            {
-                field.Add(value);
-            }
+            throw new ArgumentException($"Invalid range expression: '{part}'.");
         }
 
-        private static int ParseValue(
-            string value,
-            string expression)
+        if (string.IsNullOrWhiteSpace(rangeParts[0]))
         {
-            if (!int.TryParse(
-                    value.Trim(),
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out int result))
-            {
-                throw new ArgumentException(
-                    $"Invalid numeric value in expression: '{expression}'.");
-            }
-
-            return result;
+            throw new ArgumentException($"Range start is missing: '{part}'.");
         }
 
-        private static int ParsePositiveInteger(
-            string value,
-            string expression)
+        int start = ParseValue(rangeParts[0], part);
+
+        // Если диапазон не указан, единственным значением считается само начало
+        int end = start;
+
+        if (rangeParts.Length == 2)
         {
-            if (!int.TryParse(
-                    value.Trim(),
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out int result))
+            if (string.IsNullOrWhiteSpace(rangeParts[1]))
             {
-                throw new ArgumentException(
-                    $"Invalid step in expression: '{expression}'.");
+                throw new ArgumentException($"Range end is missing: '{part}'.");
             }
 
-            return result;
+            end = ParseValue(rangeParts[1], part);
         }
 
-        private static void ValidateRange(
-            int start,
-            int end,
-            int minValue,
-            int maxValue,
-            string expression)
+        ValidateRange(start, end, minValue, maxValue, part);
+
+        AddRange(
+            allowedValues,
+            start,
+            end,
+            step);
+    }
+
+    /// <summary>
+    /// Добавляет в список значения диапазона с указанным шагом.
+    /// </summary>
+    private static void AddRange(List<int> allowedValues, int start, int end, int step)
+    {
+        for (int value = start; value <= end; value += step)
         {
-            if (start < minValue || start > maxValue)
-            {
-                throw new ArgumentException(
-                    $"Value {start} is outside the allowed range " +
-                    $"{minValue}..{maxValue}: '{expression}'.");
-            }
+            allowedValues.Add(value);
+        }
+    }
 
-            if (end < minValue || end > maxValue)
-            {
-                throw new ArgumentException(
-                    $"Value {end} is outside the allowed range " +
-                    $"{minValue}..{maxValue}: '{expression}'.");
-            }
+    /// <summary>
+    /// Преобразует строковое значение в целое число.
+    /// </summary>
+    /// <param name="value">Строковое представление числа.</param>
+    /// <param name="expression">Исходное выражение.</param>
+    /// <returns>Распарсенное целое число.</returns>
+    private static int ParseValue(string value, string expression)
+    {
+        if (!int.TryParse(
+                value.Trim(),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out int result))
+        {
+            throw new ArgumentException($"Invalid numeric value in expression: '{expression}'.");
+        }
 
-            if (start > end)
-            {
-                throw new ArgumentException(
-                    $"Range start cannot be greater than range end: '{expression}'.");
-            }
+        return result;
+    }
+
+    /// <summary>
+    /// Преобразует строковый шаг в положительное целое число.
+    /// </summary>
+    /// <param name="value">Строковое представление шага.</param>
+    /// <param name="expression">Исходное выражение, задающее шаг.</param>
+    /// <returns>Положительное значение шага.</returns>
+    private static int ParsePositiveInteger(string value, string expression)
+    {
+        if (!int.TryParse(
+                value.Trim(),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out int result)
+            || result <= 0)
+        {
+            throw new ArgumentException($"Step must be a positive integer: '{expression}'.");
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Проверяет, что границы диапазона находятся в пределах допустимого диапазона поля.
+    /// </summary>
+    /// <param name="start">Начало диапазона.</param>
+    /// <param name="end">Конец диапазона.</param>
+    /// <param name="minValue">Минимально возможное значение поля.</param>
+    /// <param name="maxValue">Максимально возможное значение поля.</param>
+    /// <param name="expression">Исходное выражение.</param>
+    private static void ValidateRange(
+        int start,
+        int end,
+        int minValue,
+        int maxValue,
+        string expression)
+    {
+        if (start < minValue || start > maxValue)
+        {
+            throw new ArgumentException(
+                $"Value {start} is outside the allowed range " +
+                $"{minValue}..{maxValue}: '{expression}'.");
+        }
+
+        if (end < minValue || end > maxValue)
+        {
+            throw new ArgumentException(
+                $"Value {end} is outside the allowed range " +
+                $"{minValue}..{maxValue}: '{expression}'.");
+        }
+
+        if (start > end)
+        {
+            throw new ArgumentException(
+                $"Range start cannot be greater than range end: '{expression}'.");
         }
     }
 }
-
-
-
-
