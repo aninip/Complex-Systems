@@ -1,5 +1,6 @@
 ﻿using Complex_Systems.Model;
 using Complex_Systems.Parsing;
+using Xunit;
 
 namespace Complex_Systems.Tests;
 

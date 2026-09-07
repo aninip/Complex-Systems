@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Элементы решения/">
-    <File Path="../../../Downloads/Разработчик C# - Тестовое/Разработчик C# - Тестовое/Задание.txt" />
+    <File Path="../../Downloads/Разработчик C# - Тестовое/Разработчик C# - Тестовое/Задание.txt" />
   </Folder>
   <Project Path="Complex Systems.csproj" />
+  <Project Path="Tests/Tests.csproj" />
 </Solution>
