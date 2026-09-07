@@ -48,7 +48,9 @@ internal sealed class ScheduleField
         Min = min;
         Max = max;
 
+        // Количество значений, которое может содержать поле
         _valueCount = checked(max - min + 1);
+        // считаем сколько 64-битных word нужно, чтобы вместить _valueCount значений. и целочисленное округление вверх за счёт '+ 63'
         int wordCount = (_valueCount + 63) / 64;
 
         _words = new ulong[wordCount];

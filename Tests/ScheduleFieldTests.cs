@@ -1,6 +1,6 @@
 ﻿using Complex_Systems.Model;
 
-namespace Complex_Systems.ScheduleTests
+namespace Complex_Systems.Tests
 {
     public sealed class ScheduleFieldTests
     {

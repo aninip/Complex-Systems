@@ -1,4 +1,4 @@
-﻿namespace Complex_Systems.ScheduleTests
+﻿namespace Complex_Systems.Tests
 {
     internal class ScheduleSearcherTests
     {
