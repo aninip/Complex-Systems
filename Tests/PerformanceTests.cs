@@ -99,3 +99,24 @@ public class PerformanceTests
         writer.WriteLine();
     }
 }
+// Результаты тестов: 
+//[2026 - 09 - 08 21:59:09] FindNext_DefaultSchedule_ShouldBeFast
+//Iterations: 100000
+//Elapsed: 00:00:00.0280963
+//Average: 0,281 μs
+
+//[2026 - 09 - 08 21:59:09] FindNext_ShouldNotAllocateLargeAmountsOfMemory
+//Iterations: 100000
+//Allocated: 0 bytes
+//Per call: 0,00 bytes
+
+//[2026 - 09 - 08 21:59:09] FindNext_RareSchedule_ShouldBeFast
+//Iterations: 10000
+//Elapsed: 00:00:00.0251697
+//Average: 2,517 μs
+
+//[2026 - 09 - 08 22:01:41] FindNext_DefaultSchedule_ShouldBeFast
+//Iterations: 100000
+//Elapsed: 00:00:00.0266549
+//Average: 0,267 μs
+
