@@ -233,60 +233,263 @@ internal static class ScheduleSearcher
             }
 
 
+            // 5. Ищем ближайшую разрешённую минуту, большую или равную текущей
+            int? nextMinute = definition.Minutes.GetNextOrSame(minute);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            int? minute = definition.Minutes.GetNextOrSame(start.Minute);
-
-            if (minute is null)
+            // Если в текущем часе подходящей минуты больше нет, переходим к следующему допустимому часу
+            if (nextMinute is null)
             {
-                start = MoveToNextAllowedHour(start, definition);
-                continue;
+                int? followingHour = definition.Hours.GetNext(hour);
+
+                if (followingHour is not null)
+                {
+                    hour = followingHour.Value;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue;
+                }
+
+                // Если следующего часа нет, текущий день считаем исчерпанным и переходим к следующему допустимому дню.
+                int? followingDay = FindNextAllowedDay(year, month, day + 1, definition);
+
+                if (followingDay is not null)
+                {
+                    day = followingDay.Value;
+                    hour = 0;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с нового дня.
+                }
+
+                // Если в текущем месяце больше допустимых дней нет, переходим к следующему разрешённому месяцу.
+                int? followingMonth = definition.Months.GetNext(month);
+
+                if (followingMonth is not null)
+                {
+                    month = followingMonth.Value;
+                    day = 1;
+                    hour = 0;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с нового месяца.
+                }
+
+                // Если следующего месяца нет, переходим к следующему разрешённому году.
+                int? followingYear = definition.Years.GetNext(year);
+
+                if (followingYear is null)
+                    throw new InvalidOperationException("There is no next event in the definition.");
+
+                year = followingYear.Value;
+                month = 1;
+                day = 1;
+                hour = 0;
+                minute = 0;
+                second = 0;
+                millisecond = 0;
+
+                continue; // Начинаем алгоритм заново уже с нового года.
             }
 
-            if (minute.Value != start.Minute)
+            // Перезаписываем минуту
+            if (nextMinute.Value != minute)
             {
-                start = CreateDateTime(start, start.Year, start.Month, start.Day, start.Hour, minute.Value, 0);
+                minute = nextMinute.Value;
+                second = 0;
+                millisecond = 0;
+
+                continue; // Начинаем поиск заново уже с новой минуты.
             }
 
 
+            // 6. Ищем ближайшую разрешённую секунду, большую или равную текущей
+            int? nextSecond = definition.Seconds.GetNextOrSame(second);
 
-            int? second = definition.Seconds.GetNextOrSame(start.Second);
-
-            if (second is null)
+            // Если в текущей минуте подходящей секунды больше нет,
+            // переходим к следующей допустимой минуте
+            if (nextSecond is null)
             {
-                start = MoveToNextAllowedMinute(start, definition);
-                continue;
+                int? followingMinute = definition.Minutes.GetNext(minute);
+
+                if (followingMinute is not null)
+                {
+                    minute = followingMinute.Value;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с новой минуты.
+                }
+
+                // Если следующей минуты нет, текущий час считаем исчерпанным
+                // и переходим к следующему допустимому часу.
+                int? followingHour = definition.Hours.GetNext(hour);
+
+                if (followingHour is not null)
+                {
+                    hour = followingHour.Value;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с нового часа.
+                }
+
+                // Если следующего часа нет, переходим к следующему допустимому дню.
+                int? followingDay = FindNextAllowedDay(year, month, day + 1, definition);
+
+                if (followingDay is not null)
+                {
+                    day = followingDay.Value;
+                    hour = 0;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с нового дня.
+                }
+
+                // Если в текущем месяце больше допустимых дней нет,
+                // переходим к следующему разрешённому месяцу.
+                int? followingMonth = definition.Months.GetNext(month);
+
+                if (followingMonth is not null)
+                {
+                    month = followingMonth.Value;
+                    day = 1;
+                    hour = 0;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с нового месяца.
+                }
+
+                // Если следующего месяца нет, переходим к следующему разрешённому году.
+                int? followingYear = definition.Years.GetNext(year);
+
+                if (followingYear is null)
+                    throw new InvalidOperationException("There is no next event in the definition.");
+
+                year = followingYear.Value;
+                month = 1;
+                day = 1;
+                hour = 0;
+                minute = 0;
+                second = 0;
+                millisecond = 0;
+
+                continue; // Начинаем алгоритм заново уже с нового года.
             }
 
-            if (second.Value != start.Second)
+            // Перезаписываем секунду
+            if (nextSecond.Value != second)
             {
-                start = CreateDateTime(start, start.Year, start.Month, start.Day, start.Hour, start.Minute, second.Value, 0);
+                second = nextSecond.Value;
+                millisecond = 0;
+
+                continue; // Начинаем поиск заново уже с новой секунды.
             }
 
 
+            // 7. Ищем ближайшую разрешённую миллисекунду, большую или равную текущей
+            int? nextMillisecond = definition.Milliseconds.GetNextOrSame(millisecond);
 
-            int? millisecond = definition.Milliseconds.GetNextOrSame(start.Millisecond);
-
-            if (millisecond is null)
+            // Если в текущей секунде подходящей миллисекунды больше нет,
+            // переходим к следующей допустимой секунде
+            if (nextMillisecond is null)
             {
-                start = MoveToNextAllowedSecond(start, definition);
-                continue;
+                int? followingSecond = definition.Seconds.GetNext(second);
+
+                if (followingSecond is not null)
+                {
+                    second = followingSecond.Value;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с новой секунды.
+                }
+
+                // Если следующей секунды нет, переходим к следующей допустимой минуте.
+                int? followingMinute = definition.Minutes.GetNext(minute);
+
+                if (followingMinute is not null)
+                {
+                    minute = followingMinute.Value;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с новой минуты.
+                }
+
+                // Если следующей минуты нет, переходим к следующему допустимому часу.
+                int? followingHour = definition.Hours.GetNext(hour);
+
+                if (followingHour is not null)
+                {
+                    hour = followingHour.Value;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с нового часа.
+                }
+
+                // Если следующего часа нет, переходим к следующему допустимому дню.
+                int? followingDay = FindNextAllowedDay(year, month, day + 1, definition);
+
+                if (followingDay is not null)
+                {
+                    day = followingDay.Value;
+                    hour = 0;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с нового дня.
+                }
+
+                // Если в текущем месяце больше допустимых дней нет,
+                // переходим к следующему разрешённому месяцу.
+                int? followingMonth = definition.Months.GetNext(month);
+
+                if (followingMonth is not null)
+                {
+                    month = followingMonth.Value;
+                    day = 1;
+                    hour = 0;
+                    minute = 0;
+                    second = 0;
+                    millisecond = 0;
+
+                    continue; // Начинаем алгоритм заново уже с нового месяца.
+                }
+
+                // Если следующего месяца нет, переходим к следующему разрешённому году.
+                int? followingYear = definition.Years.GetNext(year);
+
+                if (followingYear is null)
+                    throw new InvalidOperationException("There is no next event in the definition.");
+
+                year = followingYear.Value;
+                month = 1;
+                day = 1;
+                hour = 0;
+                minute = 0;
+                second = 0;
+                millisecond = 0;
+
+                continue; // Начинаем алгоритм заново уже с нового года.
             }
 
-            return CreateDateTime(start, start.Year, start.Month, start.Day, start.Hour, start.Minute, start.Second, millisecond.Value);
+            // Перезаписываем миллисекунду
+            millisecond = nextMillisecond.Value;
+
+            return new DateTime(year, month, day, hour, minute, second, millisecond, value.Kind);
         }
     }
 
@@ -387,6 +590,8 @@ internal static class ScheduleSearcher
         }
     }
 
+
+    #region Next-helpers
     private static int? FindNextAllowedDay(int year, int month, int startDay, ScheduleDefinition definition)
     {
         //количество дней в конкретном месяце с учётом високосного года
@@ -410,58 +615,15 @@ internal static class ScheduleSearcher
 
         return null;
     }
-
-    private static int? FindPreviousAllowedDay(int year, int month, int startDay, ScheduleDefinition definition)
-    {
-        int daysInMonth = DateTime.DaysInMonth(year, month);
-        int firstDay = Math.Min(startDay, daysInMonth);
-
-        for (int day = firstDay; day >= 1; day--)
-        {
-            DateTime date = new(year, month, day);
-
-            if (IsDateAllowed(date, definition))
-                return day;
-        }
-
-        return null;
-    }
-
-    private static bool IsDateAllowed(DateTime date, ScheduleDefinition definition)
-    {
-        return IsDayAllowed(date, definition)
-            && definition.Weekdays.Contains((int)date.DayOfWeek);
-    }
-
-    private static bool IsDayAllowed(DateTime date, ScheduleDefinition definition)
-    {
-        if (definition.Days.Contains(date.Day))
-            return true;
-
-        return definition.Days.Contains(32)
-            && date.Day == DateTime.DaysInMonth(date.Year, date.Month);
-    }
-
     private static DateTime MoveToNextAllowedYear(DateTime value, ScheduleDefinition definition)
     {
-        int? year = definition.Years.GetNext(value.Year + 1);
+        int? year = definition.Years.GetNext(value.Year);
 
         if (year is null)
             throw new InvalidOperationException("There is no next event in the definition.");
 
         return CreateDateTime(value, year.Value, 1, 1, 0, 0, 0);
     }
-
-    private static DateTime MoveToPreviousAllowedYear(DateTime value, ScheduleDefinition definition)
-    {
-        int? year = definition.Years.GetPrevious(value.Year - 1);
-
-        if (year is null)
-            throw new InvalidOperationException("There is no previous event in the definition.");
-
-        return CreateDateTime(value, year.Value, 12, 31, 23, 59, 59, 999);
-    }
-
     private static DateTime MoveToNextAllowedMonth(DateTime value, ScheduleDefinition definition)
     {
         int? month = definition.Months.GetNext(value.Month + 1);
@@ -472,32 +634,6 @@ internal static class ScheduleSearcher
         }
 
         return MoveToNextAllowedYear(value, definition);
-    }
-
-    private static DateTime MoveToPreviousAllowedMonth(DateTime value, ScheduleDefinition definition)
-    {
-        int? month = definition.Months.GetPrevious(value.Month - 1);
-
-        if (month is not null)
-        {
-            return CreateDateTime(value, value.Year, month.Value, DateTime.DaysInMonth(value.Year, month.Value), 23, 59, 59, 999);
-        }
-
-        return MoveToPreviousAllowedYear(value, definition);
-    }
-
-    private static DateTime MoveToNextAllowedDay(DateTime value, ScheduleDefinition definition)
-    {
-        DateTime nextDay = value.AddDays(1);
-
-        return CreateDateTime(nextDay, nextDay.Year, nextDay.Month, nextDay.Day, 0, 0, 0);
-    }
-
-    private static DateTime MoveToPreviousAllowedDay(DateTime value, ScheduleDefinition definition)
-    {
-        DateTime previousDay = value.AddDays(-1);
-
-        return CreateDateTime(previousDay, previousDay.Year, previousDay.Month, previousDay.Day, 23, 59, 59, 999);
     }
 
     private static DateTime MoveToNextAllowedHour(DateTime value, ScheduleDefinition definition)
@@ -514,20 +650,6 @@ internal static class ScheduleSearcher
         return CreateDateTime(nextDay, nextDay.Year, nextDay.Month, nextDay.Day, 0, 0, 0);
     }
 
-    private static DateTime MoveToPreviousAllowedHour(DateTime value, ScheduleDefinition definition)
-    {
-        int? hour = definition.Hours.GetPrevious(value.Hour - 1);
-
-        if (hour is not null)
-        {
-            return CreateDateTime(value, value.Year, value.Month, value.Day, hour.Value, 59, 59, 999);
-        }
-
-        DateTime previousDay = value.AddDays(-1);
-
-        return CreateDateTime(previousDay, previousDay.Year, previousDay.Month, previousDay.Day, 23, 59, 59, 999);
-    }
-
     private static DateTime MoveToNextAllowedMinute(DateTime value, ScheduleDefinition definition)
     {
         int? minute = definition.Minutes.GetNext(value.Minute + 1);
@@ -540,6 +662,84 @@ internal static class ScheduleSearcher
         DateTime nextHour = value.AddHours(1);
 
         return CreateDateTime(nextHour, nextHour.Year, nextHour.Month, nextHour.Day, nextHour.Hour, 0, 0);
+    }
+
+    private static DateTime MoveToNextAllowedSecond(DateTime value, ScheduleDefinition definition)
+    {
+        int? second = definition.Seconds.GetNext(value.Second + 1);
+
+        if (second is not null)
+        {
+            return CreateDateTime(value, value.Year, value.Month, value.Day, value.Hour, value.Minute, second.Value, 0);
+        }
+
+        DateTime nextMinute = value.AddMinutes(1);
+
+        return CreateDateTime(nextMinute, nextMinute.Year, nextMinute.Month, nextMinute.Day, nextMinute.Hour, nextMinute.Minute, 0);
+    }
+    #endregion
+
+
+
+
+    #region Previous-helpers
+    private static int? FindPreviousAllowedDay(int year, int month, int startDay, ScheduleDefinition definition)
+    {
+        int daysInMonth = DateTime.DaysInMonth(year, month);
+        int firstDay = Math.Min(startDay, daysInMonth);
+
+        for (int day = firstDay; day >= 1; day--)
+        {
+            DateTime date = new(year, month, day);
+
+            if (IsDateAllowed(date, definition))
+                return day;
+        }
+
+        return null;
+    }
+
+    private static DateTime MoveToPreviousAllowedYear(DateTime value, ScheduleDefinition definition)
+    {
+        int? year = definition.Years.GetPrevious(value.Year - 1);
+
+        if (year is null)
+            throw new InvalidOperationException("There is no previous event in the definition.");
+
+        return CreateDateTime(value, year.Value, 12, 31, 23, 59, 59, 999);
+    }
+
+    private static DateTime MoveToPreviousAllowedMonth(DateTime value, ScheduleDefinition definition)
+    {
+        int? month = definition.Months.GetPrevious(value.Month - 1);
+
+        if (month is not null)
+        {
+            return CreateDateTime(value, value.Year, month.Value, DateTime.DaysInMonth(value.Year, month.Value), 23, 59, 59, 999);
+        }
+
+        return MoveToPreviousAllowedYear(value, definition);
+    }
+
+    private static DateTime MoveToPreviousAllowedDay(DateTime value, ScheduleDefinition definition)
+    {
+        DateTime previousDay = value.AddDays(-1);
+
+        return CreateDateTime(previousDay, previousDay.Year, previousDay.Month, previousDay.Day, 23, 59, 59, 999);
+    }
+
+    private static DateTime MoveToPreviousAllowedHour(DateTime value, ScheduleDefinition definition)
+    {
+        int? hour = definition.Hours.GetPrevious(value.Hour - 1);
+
+        if (hour is not null)
+        {
+            return CreateDateTime(value, value.Year, value.Month, value.Day, hour.Value, 59, 59, 999);
+        }
+
+        DateTime previousDay = value.AddDays(-1);
+
+        return CreateDateTime(previousDay, previousDay.Year, previousDay.Month, previousDay.Day, 23, 59, 59, 999);
     }
 
     private static DateTime MoveToPreviousAllowedMinute(DateTime value, ScheduleDefinition definition)
@@ -556,20 +756,6 @@ internal static class ScheduleSearcher
         return CreateDateTime(previousHour, previousHour.Year, previousHour.Month, previousHour.Day, previousHour.Hour, 59, 59, 999);
     }
 
-    private static DateTime MoveToNextAllowedSecond(DateTime value, ScheduleDefinition definition)
-    {
-        int? second = definition.Seconds.GetNext(value.Second + 1);
-
-        if (second is not null)
-        {
-            return CreateDateTime(value, value.Year, value.Month, value.Day, value.Hour, value.Minute, second.Value, 0);
-        }
-
-        DateTime nextMinute = value.AddMinutes(1);
-
-        return CreateDateTime(nextMinute, nextMinute.Year, nextMinute.Month, nextMinute.Day, nextMinute.Hour, nextMinute.Minute, 0);
-    }
-
     private static DateTime MoveToPreviousAllowedSecond(DateTime value, ScheduleDefinition definition)
     {
         int? second = definition.Seconds.GetPrevious(value.Second - 1);
@@ -583,6 +769,29 @@ internal static class ScheduleSearcher
 
         return CreateDateTime(previousMinute, previousMinute.Year, previousMinute.Month, previousMinute.Day, previousMinute.Hour, previousMinute.Minute, 59, 999);
     }
+
+    #endregion
+
+
+
+
+
+    private static bool IsDateAllowed(DateTime date, ScheduleDefinition definition)
+    {
+        return IsDayAllowed(date, definition)
+            && definition.Weekdays.Contains((int)date.DayOfWeek);
+    }
+
+    private static bool IsDayAllowed(DateTime date, ScheduleDefinition definition)
+    {
+        if (definition.Days.Contains(date.Day))
+            return true;
+
+        return definition.Days.Contains(32)
+            && date.Day == DateTime.DaysInMonth(date.Year, date.Month);
+    }
+
+
     private static DateTime RoundUpToMilliseconds(DateTime value)
     {
         long remainder = value.Ticks % TimeSpan.TicksPerMillisecond;
@@ -605,16 +814,5 @@ internal static class ScheduleSearcher
     private static DateTime CreateDateTime(DateTime source, int year, int month, int day, int hour, int minute, int second, int millisecond = 0)
     {
         return new DateTime(year, month, day, hour, minute, second, millisecond, source.Kind);
-    }
-
-
-    //И ещё: 32 не нужно превращать в 28/29/30/31 внутри ScheduleField. Это принципиально, потому что ScheduleField ничего не знает о конкретном месяце. Он только хранит допустимые значения.
-    private static bool IsDayAllowed(DateTime date, ScheduleDefinition definition)
-    {
-        if (definition.Days.Contains(date.Day))
-            return true;
-
-        return definition.Days.Contains(32)
-            && date.Day == DateTime.DaysInMonth(date.Year, date.Month);
     }
 }
