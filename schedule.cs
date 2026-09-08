@@ -1,5 +1,6 @@
 using Complex_Systems.Model;
 using Complex_Systems.Parsing;
+using Complex_Systems.Searching;
 
 namespace Complex_Systems
 {
@@ -70,7 +71,7 @@ namespace Complex_Systems
         /// <returns>Ближайший момент времени в расписании</returns>
         public DateTime NearestEvent(DateTime t1)
         {
-            return t1;
+            return ScheduleSearcher.FindNextOrSame(t1, _definition);
 
         }
 
@@ -82,7 +83,7 @@ namespace Complex_Systems
         /// <returns>Ближайший момент времени в расписании</returns>
         public DateTime NearestPrevEvent(DateTime t1)
         {
-            return t1;
+            return ScheduleSearcher.FindPreviousOrSame(t1, _definition);
 
         }
 
@@ -93,8 +94,7 @@ namespace Complex_Systems
         /// <returns>Следующий момент времени в расписании</returns>
         public DateTime NextEvent(DateTime t1)
         {
-            return t1;
-
+            return ScheduleSearcher.FindNext(t1, _definition);
         }
 
         /// <summary>
@@ -104,7 +104,7 @@ namespace Complex_Systems
         /// <returns>Предыдущий момент времени в расписании</returns>
         public DateTime PrevEvent(DateTime t1)
         {
-            return t1;
+            return ScheduleSearcher.FindPrevious(t1, _definition);
         }
 
     }
