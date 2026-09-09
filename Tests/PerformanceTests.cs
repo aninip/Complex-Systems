@@ -5,7 +5,7 @@ public class PerformanceTests
     private const string LogFilePath = "TestResults/PerformanceTests.log";
 
     [Fact]
-    public void FindNext_DefaultSchedule_ShouldBeFast()
+    public void NextEvent_DefaultSchedule_ShouldBeFast()
     {
         var schedule = new Schedule();
         DateTime value = new DateTime(2026, 9, 8, 10, 20, 30, 500);
@@ -21,16 +21,16 @@ public class PerformanceTests
         stopwatch.Stop();
 
         WriteLog(
-            nameof(FindNext_DefaultSchedule_ShouldBeFast),
+            nameof(NextEvent_DefaultSchedule_ShouldBeFast),
             $"Iterations: {iterations}",
             $"Elapsed: {stopwatch.Elapsed}",
             $"Average: {stopwatch.Elapsed.TotalMicroseconds / iterations:F3} μs");
 
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromMilliseconds(500));
     }
 
     [Fact]
-    public void FindNext_RareSchedule_ShouldBeFast()
+    public void NearestEvent_RareSchedule_ShouldBeFast()
     {
         var schedule = new Schedule("2100.12.32 23:59:59.999");
         DateTime value = new DateTime(2026, 1, 1, 0, 0, 0, 0);
@@ -46,12 +46,12 @@ public class PerformanceTests
         stopwatch.Stop();
 
         WriteLog(
-            nameof(FindNext_RareSchedule_ShouldBeFast),
+            nameof(NearestEvent_RareSchedule_ShouldBeFast),
             $"Iterations: {iterations}",
             $"Elapsed: {stopwatch.Elapsed}",
             $"Average: {stopwatch.Elapsed.TotalMicroseconds / iterations:F3} μs");
 
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromMilliseconds(500));
     }
 
     [Fact]
